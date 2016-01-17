@@ -1,6 +1,6 @@
 /**
  * This Android Studio module, YourCodeHere, and it's associated java package
- * org.usfirst.ftc.exampleteam.yourcodehere, are intended to provide an example
+ * com.thereferees.ftc_app.yourcodehere, are intended to provide an example
  * of the basic skeleton of a recommended source code structure you can use to
  * get your team going with its own code.
  *
@@ -14,4 +14,4 @@
  * sibling module for your code, though the former might be easier to get going.</p>
  */
 
-package org.usfirst.ftc.exampleteam.yourcodehere;
+package com.thereferees.ftc_app.OpModes;
