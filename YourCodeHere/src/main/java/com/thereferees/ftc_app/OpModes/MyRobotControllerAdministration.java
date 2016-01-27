@@ -5,8 +5,9 @@ import android.content.Context;
 import org.swerverobotics.library.SwerveUtil;
 import org.swerverobotics.library.interfaces.*;
 import org.swerverobotics.library.examples.*;
+import org.usfirst.ftc.exampleteam.yourcodehere.R;
+
 import com.qualcomm.ftcrobotcontroller.opmodes.*;
-import com.thereferees.ftc_app.code.R;
 
 /**
  * MyRobotControllerAdministration is a container for 'administrative' methods that interact

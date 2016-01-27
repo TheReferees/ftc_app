@@ -1,9 +1,9 @@
 package com.thereferees.ftc_app.OpModes;
 
-import com.thereferees.ftc_app.utilities.Action;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.thereferees.ftc_app.OpModes.lib.Action;
 
 import org.swerverobotics.library.interfaces.Autonomous;
 
@@ -42,11 +42,15 @@ public class Auton extends OpMode {
     public void init() {
         actionStartTime = 0;
         state = State.PUSHING_BUTTON;
-        motorTopRight = hardwareMap.dcMotor.get("topRight");
-        motorTopLeft = hardwareMap.dcMotor.get("topLeft");
-        motorBottomRight = hardwareMap.dcMotor.get("bottomRight");
-        motorBottomLeft = hardwareMap.dcMotor.get("bottomLeft");
-        buttonPusher = hardwareMap.servo.get("buttonPusher");
+        motorTopRight = hardwareMap.dcMotor.get("M_driveFR");
+        motorTopLeft = hardwareMap.dcMotor.get("M_driveFL");
+        motorBottomRight = hardwareMap.dcMotor.get("M_driveBR");
+        motorBottomLeft = hardwareMap.dcMotor.get("M_driveBL");
+
+        motorTopRight.setDirection(DcMotor.Direction.REVERSE);
+        motorBottomRight.setDirection(DcMotor.Direction.REVERSE);
+
+        //buttonPusher = hardwareMap.servo.get("buttonPusher");
         turnState = TurnState.FORWARD;
         pushButtonState = PushButtonState.TURNING;
     }
@@ -76,10 +80,10 @@ public class Auton extends OpMode {
     }
 
     private void turnToButton() {
-        doForTime(5000, new Action() {
+        doForTime(1000, new Action() {
             @Override
             public void action() {
-                setMotorsTurnLeft();
+                setMotorsForward();
             }
 
             @Override
