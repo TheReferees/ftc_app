@@ -382,6 +382,7 @@ public class Teleop extends OpMode {
         S_climberDrop.setPosition(S_climberDropPos);
         S_climberKnockdownR.setPosition(S_climberKnockdownRPos);
         S_climberKnockdownL.setPosition(S_climberKnockdownLPos);
+        S_basket.setPosition(S_basketPosition);
 
         telemetry.addData("Text", "*** Robot Data***");
         telemetry.addData("Climber Drop Pos", S_climberDropPos);
