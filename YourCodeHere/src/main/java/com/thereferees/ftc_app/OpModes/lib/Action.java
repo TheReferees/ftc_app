@@ -6,4 +6,7 @@ package com.thereferees.ftc_app.OpModes.lib;
 public interface Action {
     void action();
     void onComplete();
+    void init();
+
+    boolean hasInitialized = false;
 }
