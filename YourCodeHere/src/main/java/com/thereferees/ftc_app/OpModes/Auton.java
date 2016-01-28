@@ -20,10 +20,6 @@ public class Auton extends OpMode {
         PUSHING_BUTTON, DROPPING_CLIMBERS, PARKING
     }
 
-    public enum TurnState {
-        FORWARD, TURNING_LEFT, TURNING_RIGHT
-    }
-
     public enum PushButtonState {
         MOVING, TURNING, PUSHING_BUTTON
     }
@@ -132,11 +128,11 @@ public class Auton extends OpMode {
     }*/
 
     private void dropClimbers() {
-
+        state = State.PARKING;
     }
 
     private void park() {
-
+        stopMotors();
     }
 
     private void doUntil(Condition condition, Action action) {
@@ -218,5 +214,10 @@ public class Auton extends OpMode {
         motorBottomRight.setPower(powerRight);
         motorTopLeft.setPower(powerLeft);
         motorBottomLeft.setPower(powerLeft);
+    }
+
+    private void stopMotors() {
+        setMotors(new double[2]);
+        motorPickup.setPower(0);
     }
 }
