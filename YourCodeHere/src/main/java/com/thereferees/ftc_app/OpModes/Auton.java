@@ -3,6 +3,7 @@ package com.thereferees.ftc_app.OpModes;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.thereferees.ftc_app.OpModes.lib.Action;
+import com.thereferees.ftc_app.OpModes.lib.Callback;
 import com.thereferees.ftc_app.OpModes.lib.Condition;
 import com.thereferees.ftc_app.OpModes.lib.PIDController;
 
@@ -97,9 +98,19 @@ public class Auton extends OpMode {
         switch(pushButtonState) {
             case MOVING:
                 motorPickup.setPower(-PICKUP_POWER);
-                driveForward(36d);
+                driveForward(36d, new Callback() {
+                    @Override
+                    public void onComplete() {
+                        pushButtonState = PushButtonState.TURNING;
+                    }
+                });
             case TURNING:
-                turn(120);
+                turn(120, new Callback() {
+                    @Override
+                    public void onComplete() {
+                        state = State.DROPPING_CLIMBERS;
+                    }
+                });
             /*case PUSHING_BUTTON:
                 pressButton();*/
         }
@@ -129,8 +140,9 @@ public class Auton extends OpMode {
     }
 
     private void doUntil(Condition condition, Action action) {
-        if (!Action.hasInitialized) {
+        if (!action.hasInitialized) {
             action.init();
+            action.hasInitialized = true;
         }
 
         if (!condition.evaluate()) {
@@ -150,7 +162,7 @@ public class Auton extends OpMode {
         }
     }
 
-    private void driveForward(final double distance) {
+    private void driveForward(final double distance, final Callback callback) {
         doUntil(new Condition() {
             @Override
             public boolean evaluate() {
@@ -169,12 +181,12 @@ public class Auton extends OpMode {
 
             @Override
             public void onComplete() {
-                pushButtonState = PushButtonState.TURNING;
+                callback.onComplete();
             }
         });
     }
 
-    private void turn(final double degrees) {
+    private void turn(final double degrees, final Callback callback) {
         doUntil(new Condition() {
             @Override
             public boolean evaluate() {
@@ -193,7 +205,7 @@ public class Auton extends OpMode {
 
             @Override
             public void onComplete() {
-                state = State.DROPPING_CLIMBERS;
+                callback.onComplete();
             }
         });
     }

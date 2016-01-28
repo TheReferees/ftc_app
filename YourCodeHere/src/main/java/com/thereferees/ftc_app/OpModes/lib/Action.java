@@ -3,10 +3,10 @@ package com.thereferees.ftc_app.OpModes.lib;
 /**
  * Created by Saba on 1/26/16.
  */
-public interface Action {
-    void action();
-    void onComplete();
-    void init();
+public abstract class Action {
+    public abstract void action();
+    public abstract void onComplete();
+    public abstract void init();
 
-    boolean hasInitialized = false;
+    public boolean hasInitialized = false;
 }

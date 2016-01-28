@@ -61,7 +61,6 @@ public class PIDController {
     private DcMotor[] motors;
     private int[] targets;
     private double turnDiameter;
-    private double[] drivePowers;
 
     //Turns left with positive value
     public void setTargets(double target) {
@@ -101,13 +100,13 @@ public class PIDController {
                 if(error[i] < 0.0d) {
                     power[i] *= -1;
                 }
-                drivePowers[i] = Range.clip(power[i], -1.0d, 1.0d);
+                power[i] = Range.clip(power[i], -1.0d, 1.0d);
             }
         } else {
-            drivePowers[0] = 0.0d;
-            drivePowers[1] = 0.0d;
+            power[0] = 0.0d;
+            power[1] = 0.0d;
         }
-        return drivePowers;
+        return power;
     }
 
     public boolean hasReachedDestination() {
