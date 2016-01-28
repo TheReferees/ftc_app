@@ -3,6 +3,7 @@ package com.thereferees.ftc_app.OpModes;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.thereferees.ftc_app.OpModes.lib.Action;
+import com.thereferees.ftc_app.OpModes.lib.Condition;
 import com.thereferees.ftc_app.OpModes.lib.PIDController;
 
 import org.swerverobotics.library.interfaces.Autonomous;
@@ -30,12 +31,12 @@ public class Auton extends OpMode {
     DcMotor motorTopLeft;
     DcMotor motorBottomRight;
     DcMotor motorBottomLeft;
+    DcMotor motorPickup;
 
     //Servo buttonPusher;
 
     private long actionStartTime;
     private State state;
-    private TurnState turnState;
     private PushButtonState pushButtonState;
 
     final int       DRIVE_GEAR_RATIO        = 1,
@@ -51,6 +52,8 @@ public class Auton extends OpMode {
                     TURN_POWER_MIN          = 0.25d,
                     TURN_DIAMETER           = Math.sqrt(Math.pow(9.0d, 2.0d) + Math.pow(16.5d, 2.0d));
 
+    final double PICKUP_POWER = 0.8d;
+
 
     private PIDController drivePIDController;
     private PIDController turnPIDController;
@@ -63,12 +66,12 @@ public class Auton extends OpMode {
         motorTopLeft = hardwareMap.dcMotor.get("M_driveFL");
         motorBottomRight = hardwareMap.dcMotor.get("M_driveBR");
         motorBottomLeft = hardwareMap.dcMotor.get("M_driveBL");
+        motorPickup    = hardwareMap.dcMotor.get("M_pickup");
 
         motorTopRight.setDirection(DcMotor.Direction.REVERSE);
         motorBottomRight.setDirection(DcMotor.Direction.REVERSE);
 
         //buttonPusher = hardwareMap.servo.get("buttonPusher");
-        turnState = TurnState.FORWARD;
         pushButtonState = PushButtonState.TURNING;
 
         drivePIDController = new PIDController(DRIVE_WHEEL_DIAMETER, DRIVE_GEAR_RATIO, DRIVE_THRESHOLD, DRIVE_SLOW_DOWN_START, DRIVE_FINE_TUNE_START, DRIVE_POWER_MIN, PIDController.TypePID.DRIVE, motorTopRight, motorTopLeft, motorBottomLeft, motorBottomRight);
@@ -93,7 +96,8 @@ public class Auton extends OpMode {
     private void pushButtonSequence() {
         switch(pushButtonState) {
             case MOVING:
-                driveForward(36);
+                motorPickup.setPower(-PICKUP_POWER);
+                driveForward(36d);
             case TURNING:
                 turn(120);
             /*case PUSHING_BUTTON:
@@ -124,7 +128,19 @@ public class Auton extends OpMode {
 
     }
 
-    private void doForTime (int time, Action action) {
+    private void doUntil(Condition condition, Action action) {
+        if (!Action.hasInitialized) {
+            action.init();
+        }
+
+        if (!condition.evaluate()) {
+            action.action();
+        } else {
+            action.onComplete();
+        }
+    }
+
+    private void doForTime(int time, Action action) {
         if (actionStartTime == 0) {
             actionStartTime = System.currentTimeMillis();
             action.action();
@@ -134,27 +150,57 @@ public class Auton extends OpMode {
         }
     }
 
-    private void driveForward(double distance) {
-        drivePIDController.setTargets(distance);
-        if (!drivePIDController.hasReachedDestination())
-            setMotors(drivePIDController.run());
+    private void driveForward(final double distance) {
+        doUntil(new Condition() {
+            @Override
+            public boolean evaluate() {
+                return drivePIDController.hasReachedDestination();
+            }
+        }, new Action() {
+            @Override
+            public void init() {
+                drivePIDController.setTargets(distance);
+            }
+
+            @Override
+            public void action() {
+                setMotors(drivePIDController.run());
+            }
+
+            @Override
+            public void onComplete() {
+                pushButtonState = PushButtonState.TURNING;
+            }
+        });
     }
 
-    private void turn(double degrees) {
-        drivePIDController.setTargets(degrees);
-        if (!drivePIDController.hasReachedDestination())
-            setMotors(drivePIDController.run());
+    private void turn(final double degrees) {
+        doUntil(new Condition() {
+            @Override
+            public boolean evaluate() {
+                return turnPIDController.hasReachedDestination();
+            }
+        }, new Action() {
+            @Override
+            public void init() {
+                turnPIDController.setTargets(degrees);
+            }
+
+            @Override
+            public void action() {
+                setMotors(turnPIDController.run());
+            }
+
+            @Override
+            public void onComplete() {
+                state = State.DROPPING_CLIMBERS;
+            }
+        });
     }
 
     private void setMotors(double[] power) {
         double powerRight = power[0];
         double powerLeft = power[1];
-        if (powerLeft > powerRight)
-            turnState = TurnState.TURNING_LEFT;
-        else if (powerLeft < powerRight)
-            turnState = TurnState.TURNING_RIGHT;
-        else
-            turnState = TurnState.FORWARD;
 
         motorTopRight.setPower(powerRight);
         motorBottomRight.setPower(powerRight);
