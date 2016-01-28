@@ -69,7 +69,7 @@ public class Auton extends OpMode {
         motorBottomRight.setDirection(DcMotor.Direction.REVERSE);
 
         //buttonPusher = hardwareMap.servo.get("buttonPusher");
-        pushButtonState = PushButtonState.TURNING;
+        pushButtonState = PushButtonState.MOVING;
 
         drivePIDController = new PIDController(DRIVE_WHEEL_DIAMETER, DRIVE_GEAR_RATIO, DRIVE_THRESHOLD, DRIVE_SLOW_DOWN_START, DRIVE_FINE_TUNE_START, DRIVE_POWER_MIN, PIDController.TypePID.DRIVE, motorTopRight, motorTopLeft, motorBottomLeft, motorBottomRight);
         turnPIDController = new PIDController(DRIVE_WHEEL_DIAMETER, TURN_DIAMETER, DRIVE_GEAR_RATIO, TURN_THRESHOLD, TURN_SLOW_DOWN_START, TURN_FINE_TUNE_START, TURN_POWER_MIN, PIDController.TypePID.TURN, motorTopRight, motorTopLeft, motorBottomLeft, motorBottomRight);
