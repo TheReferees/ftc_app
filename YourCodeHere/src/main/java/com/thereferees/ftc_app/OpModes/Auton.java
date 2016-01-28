@@ -2,7 +2,6 @@ package com.thereferees.ftc_app.OpModes;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.thereferees.ftc_app.OpModes.lib.Action;
 import com.thereferees.ftc_app.OpModes.lib.PIDController;
 
@@ -24,7 +23,7 @@ public class Auton extends OpMode {
     }
 
     public enum PushButtonState {
-        TURNING, PUSHING_BUTTON
+        MOVING, TURNING, PUSHING_BUTTON
     }
 
     DcMotor motorTopRight;
@@ -32,7 +31,7 @@ public class Auton extends OpMode {
     DcMotor motorBottomRight;
     DcMotor motorBottomLeft;
 
-    Servo buttonPusher;
+    //Servo buttonPusher;
 
     private long actionStartTime;
     private State state;
@@ -54,6 +53,7 @@ public class Auton extends OpMode {
 
 
     private PIDController drivePIDController;
+    private PIDController turnPIDController;
 
     @Override
     public void init() {
@@ -72,7 +72,7 @@ public class Auton extends OpMode {
         pushButtonState = PushButtonState.TURNING;
 
         drivePIDController = new PIDController(DRIVE_WHEEL_DIAMETER, DRIVE_GEAR_RATIO, DRIVE_THRESHOLD, DRIVE_SLOW_DOWN_START, DRIVE_FINE_TUNE_START, DRIVE_POWER_MIN, PIDController.TypePID.DRIVE, motorTopRight, motorTopLeft, motorBottomLeft, motorBottomRight);
-        turnPIDController = new PIDController(DRIVE_WHEEL_DIAMETER, TURN_WHEEL_DIAMETER, DRIVE_GEAR_RATIO, TURN_THRESHOLD, TURN_SLOW_DOWN_START, TURN_FINE_TUNE_START, TURN_POWER_MIN, PIDController.TypePID.DRIVE, motorTopRight, motorTopLeft, motorBottomLeft, motorBottomRight);
+        turnPIDController = new PIDController(DRIVE_WHEEL_DIAMETER, TURN_DIAMETER, DRIVE_GEAR_RATIO, TURN_THRESHOLD, TURN_SLOW_DOWN_START, TURN_FINE_TUNE_START, TURN_POWER_MIN, PIDController.TypePID.TURN, motorTopRight, motorTopLeft, motorBottomLeft, motorBottomRight);
     }
 
     @Override
@@ -92,18 +92,16 @@ public class Auton extends OpMode {
 
     private void pushButtonSequence() {
         switch(pushButtonState) {
+            case MOVING:
+                driveForward(36);
             case TURNING:
-                turnToButton();
-            case PUSHING_BUTTON:
-                pressButton();
+                turn(120);
+            /*case PUSHING_BUTTON:
+                pressButton();*/
         }
     }
 
-    private void turnToButton() {
-        driveFoward();
-    }
-
-    private void pressButton() {
+    /*private void pressButton() {
         doForTime(2000, new Action() {
             @Override
             public void action() {
@@ -116,7 +114,7 @@ public class Auton extends OpMode {
                 state = State.DROPPING_CLIMBERS;
             }
         });
-    }
+    }*/
 
     private void dropClimbers() {
 
@@ -137,20 +135,20 @@ public class Auton extends OpMode {
     }
 
     private void driveForward(double distance) {
-        drivePIDController.setTarget(distance);
+        drivePIDController.setTargets(distance);
         if (!drivePIDController.hasReachedDestination())
             setMotors(drivePIDController.run());
     }
 
     private void turn(double degrees) {
-        drivePIDController.setTarget(degrees);
+        drivePIDController.setTargets(degrees);
         if (!drivePIDController.hasReachedDestination())
             setMotors(drivePIDController.run());
     }
 
     private void setMotors(double[] power) {
-        powerRight = power[0];
-        powerLeft = power[1];
+        double powerRight = power[0];
+        double powerLeft = power[1];
         if (powerLeft > powerRight)
             turnState = TurnState.TURNING_LEFT;
         else if (powerLeft < powerRight)
