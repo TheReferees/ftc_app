@@ -125,7 +125,7 @@ public class Auton extends OpMode {
         switch(pushButtonState) {
             case FORWARD1:
                 motorPickup.setPower(-PICKUP_POWER);
-                driveForward(24d, 10000, new Callback() {
+                driveForward(35d, 10000, new Callback() {
                     @Override
                     public void onComplete() {
                         pushButtonState = PushButtonState.TURN1;
@@ -133,7 +133,7 @@ public class Auton extends OpMode {
                 });
                 break;
             case TURN1:
-                turn(90, 10000, new Callback() {
+                turn(180, 10000, new Callback() {
                     @Override
                     public void onComplete() {
                         pushButtonState = PushButtonState.FORWARD2;
@@ -141,7 +141,7 @@ public class Auton extends OpMode {
                 });
                 break;
             case FORWARD2:
-                driveForward(40d, 10000, new Callback() {
+                driveForward(-24d, 10000, new Callback() {
                     @Override
                     public void onComplete() {
                         pushButtonState = PushButtonState.TURN2;
