@@ -56,7 +56,7 @@ public class Auton extends OpMode {
                     TURN_SLOW_DOWN_START    = 1.5d,
                     TURN_FINE_TUNE_START    = 0.5d,
                     TURN_POWER_MIN          = 0.25d,
-                    TURN_DIAMETER           = Math.sqrt(Math.pow(9.0d, 2.0d) + Math.pow(16.5d, 2.0d));
+                    TURN_DIAMETER           = Math.sqrt(Math.pow(5.0 + 7.0/8, 2.0d) + Math.pow(16.0 + 3.0/8, 2.0d));
 
     final double PICKUP_POWER = 0.8d;
 
@@ -87,8 +87,8 @@ public class Auton extends OpMode {
         //buttonPusher = hardwareMap.servo.get("buttonPusher");
         pushButtonState = PushButtonState.FORWARD1;
 
-        drivePIDController = new PIDController(DRIVE_WHEEL_DIAMETER, DRIVE_GEAR_RATIO, DRIVE_THRESHOLD, DRIVE_SLOW_DOWN_START, DRIVE_FINE_TUNE_START, DRIVE_POWER_MIN, PIDController.TypePID.DRIVE, motorTopRight, motorTopLeft, motorBottomLeft, motorBottomRight);
-        turnPIDController = new PIDController(DRIVE_WHEEL_DIAMETER, TURN_DIAMETER, DRIVE_GEAR_RATIO, TURN_THRESHOLD, TURN_SLOW_DOWN_START, TURN_FINE_TUNE_START, TURN_POWER_MIN, PIDController.TypePID.TURN, motorTopRight, motorTopLeft, motorBottomLeft, motorBottomRight);
+        drivePIDController = new PIDController(DRIVE_WHEEL_DIAMETER, DRIVE_GEAR_RATIO, DRIVE_THRESHOLD, DRIVE_SLOW_DOWN_START, DRIVE_FINE_TUNE_START, DRIVE_POWER_MIN, PIDController.TypePID.DRIVE, motorTopRight, motorBottomRight, motorTopLeft, motorBottomLeft);
+        turnPIDController = new PIDController(DRIVE_WHEEL_DIAMETER, TURN_DIAMETER, DRIVE_GEAR_RATIO, TURN_THRESHOLD, TURN_SLOW_DOWN_START, TURN_FINE_TUNE_START, TURN_POWER_MIN, PIDController.TypePID.TURN, motorTopRight, motorBottomRight, motorTopLeft, motorBottomLeft);
     }
 
     @Override
@@ -112,6 +112,13 @@ public class Auton extends OpMode {
         telemetry.addData("Drive L Target: ", drivePIDController.getTargets()[1]);
         telemetry.addData("DRIVE R POWER: ", drivePIDController.run()[0]);
         telemetry.addData("DRIVE L POWER: ", drivePIDController.run()[1]);
+
+        /*telemetry.addData("Turn R Pos: ", turnPIDController.getCurrentPosition()[0]);
+        telemetry.addData("Turn L Pos: ", turnPIDController.getCurrentPosition()[1]);
+        telemetry.addData("Turn R Target: ", turnPIDController.getTargets()[0]);
+        telemetry.addData("Turn L Target: ", turnPIDController.getTargets()[1]);
+        telemetry.addData("Turn R POWER: ", turnPIDController.run()[0]);
+        telemetry.addData("Turn L POWER: ", turnPIDController.run()[1]);*/
     }
 
     private void pushButtonSequence() {
@@ -126,7 +133,7 @@ public class Auton extends OpMode {
                 });
                 break;
             case TURN1:
-                turn(45, 10000, new Callback() {
+                turn(90, 10000, new Callback() {
                     @Override
                     public void onComplete() {
                         pushButtonState = PushButtonState.FORWARD2;

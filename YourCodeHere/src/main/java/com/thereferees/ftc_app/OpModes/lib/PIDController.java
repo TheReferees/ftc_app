@@ -84,8 +84,7 @@ public class PIDController {
             targets[i] = (int) (getCurrentPosition()[i] + target * conversionFactor);
 
             if (typePID == TypePID.TURN) {
-                if (target < 0)
-                    target *= -1;
+                target *= -1;
             }
         }
     }
@@ -118,9 +117,6 @@ public class PIDController {
                 }
                 power[i] = Range.clip(power[i], -1.0d, 1.0d);
             }
-        } else {
-            power[0] = 0.0d;
-            power[1] = 0.0d;
         }
         return power;
     }
@@ -130,6 +126,9 @@ public class PIDController {
             if(Math.abs(targets[i] - getCurrentPosition()[i]) > threshold) {
                 return false;
             }
+        }
+        for (DcMotor motor : motors) {
+            motor.setPower(0.0d);
         }
         return true;
     }
