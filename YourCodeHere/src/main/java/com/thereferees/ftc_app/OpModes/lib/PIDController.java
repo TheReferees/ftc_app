@@ -7,12 +7,40 @@ import com.qualcomm.robotcore.util.Range;
  * Created by Andrew on 1/7/2016.
  */
 public class PIDController {
+
+    // variables that change depending on part of robot
+    private double wheelDiameter;
+    private int gearRatio;
+    private int threshold;
+    private int sides = 1;
+    private double slowDownStart;
+    private double fineTuneStart;
+    private double powerMin;
+    final int TICKS_PER_REVOLUTION   = 1120;
+    private double conversionFactor;
+    private DcMotor[] motors;
+    private int[] targets;
+    private double turnDiameter;
+
+
     public PIDController(double wheelDiameter, int gearRatio, int threshold, double slowDownStart, double fineTuneStart, double powerMin, TypePID typePID, DcMotor ... motors) {
         this(wheelDiameter, 1.0d, gearRatio, threshold, slowDownStart, fineTuneStart, powerMin, typePID, motors);
     }
-    public PIDController(double wheel1Diameter, double wheel2Diameter, int gearRatio, int threshold, double slowDownStart, double fineTuneStart, double powerMin, TypePID typePID, DcMotor ... motors) {
-        this.wheelDiameter = wheel1Diameter;
-        this.turnDiameter = wheel2Diameter;
+
+    /**
+     * @param wheelDiameter
+     * @param turnDiameter
+     * @param gearRatio
+     * @param threshold Amount of allowable error in number of encoder ticks to destination.
+     * @param slowDownStart Number of wheel revolutions before slowing down the first time.
+     * @param fineTuneStart Number of wheel revolutions before slowing down the second time.
+     * @param powerMin Minimum motor power.
+     * @param typePID Determines conversion factor (degrees to ticks or distance to ticks based off type)
+     * @param motors
+     */
+    public PIDController(double wheelDiameter, double turnDiameter, int gearRatio, int threshold, double slowDownStart, double fineTuneStart, double powerMin, TypePID typePID, DcMotor ... motors) {
+        this.wheelDiameter = wheelDiameter;
+        this.turnDiameter = turnDiameter;
         this.gearRatio = gearRatio;
         this.threshold = threshold;
         this.slowDownStart = slowDownStart;
@@ -48,19 +76,7 @@ public class PIDController {
         TURN,
         LIFT
     } TypePID typePID;
-    // variables that change depending on part of robot
-    private double wheelDiameter;
-    private int gearRatio;
-    private int threshold;
-    private int sides = 1;
-    private double slowDownStart;
-    private double fineTuneStart;
-    private double powerMin;
-    final int TICKS_PER_REVOLUTION   = 1120;
-    private double conversionFactor;
-    private DcMotor[] motors;
-    private int[] targets;
-    private double turnDiameter;
+
 
     //Turns left with positive value
     public void setTargets(double target) {
