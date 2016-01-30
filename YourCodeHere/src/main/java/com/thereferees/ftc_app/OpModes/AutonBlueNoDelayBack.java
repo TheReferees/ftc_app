@@ -1,29 +1,38 @@
 package com.thereferees.ftc_app.OpModes;
 
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import android.util.Log;
+
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.thereferees.ftc_app.OpModes.lib.Action;
 import com.thereferees.ftc_app.OpModes.lib.Callback;
 import com.thereferees.ftc_app.OpModes.lib.Condition;
+import com.thereferees.ftc_app.OpModes.lib.EncoderPIDController;
+import com.thereferees.ftc_app.OpModes.lib.GyroPIDControllerNew;
 import com.thereferees.ftc_app.OpModes.lib.PIDController;
 
+import org.swerverobotics.library.ClassFactory;
+import org.swerverobotics.library.SynchronousOpMode;
 import org.swerverobotics.library.interfaces.Autonomous;
+import org.swerverobotics.library.interfaces.EulerAngles;
+import org.swerverobotics.library.interfaces.IBNO055IMU;
+import org.swerverobotics.library.interfaces.IFunc;
+import org.swerverobotics.library.interfaces.Position;
 
 /**
  * A skeletal example of a do-nothing first OpMode. Go ahead and change this code
  * to suit your needs, or create sibling OpModes adjacent to this one in the same
  * Java package.
  */
-@Autonomous(name="Auton")
-public class Auton extends OpMode {
+@Autonomous(name="AutonBlueNoDelayBack")
+public class AutonBlueNoDelayBack extends SynchronousOpMode {
     public enum State {
         PUSHING_BUTTON, PARKING
     }
 
     public enum PushButtonState {
-        FORWARD1, TURN1, FORWARD2, TURN2, FORWARD3, DETECT_BUTTON, EXTEND_PUSHER, PUSH_BUTTON, RETRACT_PUSHER, FINISH, RETRACT_CLIMBER_DROP
+        FORWARD1, TURN1, FORWARD2, TURN2, FORWARD3, DETECT_BUTTON, EXTEND_PUSHER, PUSH_BUTTON, RETRACT_PUSHER, FINISH, RETRACT_CLIMBER_DROP, CLIMBER_DROP
     }
 
     ColorSensor colorSensor;
@@ -31,11 +40,19 @@ public class Auton extends OpMode {
     Servo buttonPusher;
     Servo climberDrop;
 
+    IBNO055IMU gyro;
+    IBNO055IMU.Parameters parameters;
+
     DcMotor motorTopRight;
     DcMotor motorTopLeft;
     DcMotor motorBottomRight;
     DcMotor motorBottomLeft;
     DcMotor motorPickup;
+
+    EulerAngles angles;
+    Position position;
+
+    private double startAngle = 0;
 
     private long actionStartTime;
     private State state;
@@ -46,28 +63,24 @@ public class Auton extends OpMode {
     private boolean isFirstExtend = true;
 
     final int       DRIVE_GEAR_RATIO        = 1,
-                    DRIVE_THRESHOLD         = 20,
-                    TURN_THRESHOLD          = 80;
+                    DRIVE_THRESHOLD         = 60;
 
     final double    DRIVE_WHEEL_DIAMETER    = 4,
                     DRIVE_SLOW_DOWN_START   = 1.5d,
                     DRIVE_FINE_TUNE_START   = 0.5d,
-                    DRIVE_POWER_MIN         = 0.25d,
-                    TURN_SLOW_DOWN_START    = 1.5d,
-                    TURN_FINE_TUNE_START    = 0.5d,
-                    TURN_POWER_MIN          = 0.25d,
-                    TURN_DIAMETER           = Math.sqrt(Math.pow(5.0 + 7.0/8, 2.0d) + Math.pow(16.0 + 3.0/8, 2.0d));
+                    GYRO_SLOW_DOWN_START    = 45d,
+                    GYRO_FINE_TUNE_START    = 15d,
+                    GYRO_THRESHOLD          = 1.5;
 
     final double PICKUP_POWER = 0.8d;
 
     private boolean pause = false;
 
 
-    private PIDController drivePIDController;
-    private PIDController turnPIDController;
+    private EncoderPIDController drivePIDController;
+    private GyroPIDControllerNew turnPIDController;
 
-    @Override
-    public void init() {
+    public void initialize() {
         actionStartTime = 0;
         state = State.PUSHING_BUTTON;
         motorTopRight = hardwareMap.dcMotor.get("M_driveFR");
@@ -75,25 +88,49 @@ public class Auton extends OpMode {
         motorBottomRight = hardwareMap.dcMotor.get("M_driveBR");
         motorBottomLeft = hardwareMap.dcMotor.get("M_driveBL");
         motorPickup    = hardwareMap.dcMotor.get("M_pickup");
+        Log.d("Init...", "HERE");
 
         //colorSensor = hardwareMap.colorSensor.get("SS_color");
         //buttonPusher = hardwareMap.servo.get("S_buttonPusher");
-
         //climberDrop = hardwareMap.servo.get("S_climberDrop");
 
         motorTopRight.setDirection(DcMotor.Direction.REVERSE);
         motorBottomRight.setDirection(DcMotor.Direction.REVERSE);
 
-        //buttonPusher = hardwareMap.servo.get("buttonPusher");
         pushButtonState = PushButtonState.FORWARD1;
 
-        drivePIDController = new PIDController(DRIVE_WHEEL_DIAMETER, DRIVE_GEAR_RATIO, DRIVE_THRESHOLD, DRIVE_SLOW_DOWN_START, DRIVE_FINE_TUNE_START, DRIVE_POWER_MIN, PIDController.TypePID.DRIVE, motorTopRight, motorBottomRight, motorTopLeft, motorBottomLeft);
-        turnPIDController = new PIDController(DRIVE_WHEEL_DIAMETER, TURN_DIAMETER, DRIVE_GEAR_RATIO, TURN_THRESHOLD, TURN_SLOW_DOWN_START, TURN_FINE_TUNE_START, TURN_POWER_MIN, PIDController.TypePID.TURN, motorTopRight, motorBottomRight, motorTopLeft, motorBottomLeft);
+        Log.d("Init...", "HERE1");
+
+        parameters = new IBNO055IMU.Parameters();
+        parameters.angleUnit      = IBNO055IMU.ANGLEUNIT.DEGREES;
+        parameters.accelUnit      = IBNO055IMU.ACCELUNIT.METERS_PERSEC_PERSEC;
+        parameters.loggingEnabled = false;
+        parameters.loggingTag     = "BNO055";
+        gyro = ClassFactory.createAdaFruitBNO055IMU(hardwareMap.i2cDevice.get("SS_gyro"), parameters);
+
+        Log.d("Init...", "HERE2");
+        drivePIDController = new EncoderPIDController(DRIVE_WHEEL_DIAMETER, DRIVE_GEAR_RATIO, DRIVE_THRESHOLD, DRIVE_SLOW_DOWN_START, DRIVE_FINE_TUNE_START, PIDController.TypePID.DRIVE, motorTopRight, motorBottomRight, motorTopLeft, motorBottomLeft);
+        turnPIDController = new GyroPIDControllerNew(gyro, GYRO_THRESHOLD, GYRO_SLOW_DOWN_START, GYRO_FINE_TUNE_START, motorTopRight, motorBottomRight, motorTopLeft, motorBottomLeft);
+        startAngle = gyro.getAngularOrientation().heading;
+
+        Log.d("InitAuton", "" + gyro.isGyroCalibrated());
     }
 
     @Override
-    public void loop() {
-        if (!pause) {
+    public void main() throws InterruptedException {
+        initialize();
+        //composeDashboard();
+        while (opModeIsActive()) {
+            if (!gyro.isGyroCalibrated())
+                idle();
+            iteration();
+            telemetry.update();
+            idle();
+        }
+    }
+
+    public void iteration() {
+        if (true) {
             switch (state) {
                 case PUSHING_BUTTON:
                     pushButtonSequence();
@@ -106,12 +143,12 @@ public class Auton extends OpMode {
             pause = false;
             motorPickup.setPower(-PICKUP_POWER);
         }
-        telemetry.addData("Drive R Pos: ", drivePIDController.getCurrentPosition()[0]);
+        /*telemetry.addData("Drive R Pos: ", drivePIDController.getCurrentPosition()[0]);
         telemetry.addData("Drive L Pos: ", drivePIDController.getCurrentPosition()[1]);
         telemetry.addData("Drive R Target: ", drivePIDController.getTargets()[0]);
         telemetry.addData("Drive L Target: ", drivePIDController.getTargets()[1]);
         telemetry.addData("DRIVE R POWER: ", drivePIDController.run()[0]);
-        telemetry.addData("DRIVE L POWER: ", drivePIDController.run()[1]);
+        telemetry.addData("DRIVE L POWER: ", drivePIDController.run()[1]);*/
 
         /*telemetry.addData("Turn R Pos: ", turnPIDController.getCurrentPosition()[0]);
         telemetry.addData("Turn L Pos: ", turnPIDController.getCurrentPosition()[1]);
@@ -125,31 +162,35 @@ public class Auton extends OpMode {
         switch(pushButtonState) {
             case FORWARD1:
                 motorPickup.setPower(-PICKUP_POWER);
-                driveForward(35d, 10000, new Callback() {
+                driveForward(36d, 10000, new Callback() {
                     @Override
                     public void onComplete() {
+                        Log.d("AutonForward", "setting enum");
                         pushButtonState = PushButtonState.TURN1;
                     }
                 });
                 break;
             case TURN1:
-                turn(180, 10000, new Callback() {
+                Log.d("AutonTurn", "BEFORE TURNING");
+                turn(45, 10000, new Callback() {
                     @Override
                     public void onComplete() {
+                        //state=State.PARKING;
                         pushButtonState = PushButtonState.FORWARD2;
                     }
                 });
                 break;
             case FORWARD2:
-                driveForward(-24d, 10000, new Callback() {
+                driveForward(80d, 10000, new Callback() {
                     @Override
                     public void onComplete() {
+                        //state=State.PARKING;
                         pushButtonState = PushButtonState.TURN2;
                     }
                 });
                 break;
             case TURN2:
-                turn(-45, 10000, new Callback() {
+                turn(135, 10000, new Callback() {
                     @Override
                     public void onComplete() {
                         pushButtonState = PushButtonState.FORWARD3;
@@ -157,22 +198,23 @@ public class Auton extends OpMode {
                 });
                 break;
             case FORWARD3:
-                driveForward(15d, 10000, new Callback() {
+                driveForward(-10d, 10000, new Callback() {
                     @Override
                     public void onComplete() {
-                        pushButtonState = PushButtonState.DETECT_BUTTON;
+                        pushButtonState = PushButtonState.CLIMBER_DROP;
                     }
                 });
                 break;
-            case DETECT_BUTTON:
-                driveForward(5d, 10000, new Callback() {
-                    @Override
-                    public void onComplete() {
-                        pushButtonState = PushButtonState.EXTEND_PUSHER;
-                    }
-                });
+            case CLIMBER_DROP:
+                climberDrop.setPosition(Servo.MIN_POSITION);
+                /*if (climberDrop.getPosition() - Servo.MIN_POSITION > 0.05d)
+                    climberDrop.setPosition(climberDrop.getPosition() - 0.01);*/
+                if (climberDrop.getPosition() - Servo.MIN_POSITION < 0.05d) {
+                    climberDrop.setPosition(0.36d);
+                    state = State.PARKING;
+                }
                 break;
-            case EXTEND_PUSHER:
+            /*case EXTEND_PUSHER:
                 doUntil(5000, new Condition() {
                     @Override
                     public boolean evaluate() {
@@ -189,7 +231,6 @@ public class Auton extends OpMode {
                         buttonPusher.setPosition(0.5);
 
                         if (isFirstExtend) {
-                            climberDrop.setPosition(1);
 
                             if (colorSensor.red() < colorSensor.blue()) {
                                 pushButtonState = PushButtonState.RETRACT_PUSHER;
@@ -257,7 +298,7 @@ public class Auton extends OpMode {
                     }
                 });
 
-                break;
+                break;*/
             /*case PUSHING_BUTTON:
                 pressButton();*/
         }
@@ -269,13 +310,18 @@ public class Auton extends OpMode {
     }
 
     private void park() {
-        stopMotors();
+        driveForward(12d, 10000, new Callback() {
+            @Override
+            public void onComplete() {
+                stopMotors();
+            }
+        });
     }
 
     private void waitForConfirmation() {
         pause = true;
         motorPickup.setPower(0);
-        telemetry.addData("pause", "PAUSING");
+        //telemetry.addData("pause", "PAUSING");
     }
 
     private void doUntil(int timeLimit, Condition condition, Action action) {
@@ -312,6 +358,7 @@ public class Auton extends OpMode {
         }, new Action() {
             @Override
             public void init() {
+                Log.d("InitAuton", "" + startAngle);
                 drivePIDController.setTargets(distance);
             }
 
@@ -322,6 +369,7 @@ public class Auton extends OpMode {
 
             @Override
             public void onComplete() {
+                Log.d("AutonForward", "HEREE");
                 callback.onComplete();
             }
         });
@@ -341,11 +389,15 @@ public class Auton extends OpMode {
 
             @Override
             public void action() {
+                Log.d("TURNING", "RIGHT: " + turnPIDController.run()[0]);
+                Log.d("TURNING", "LEFT: " + turnPIDController.run()[1]);
                 setMotors(turnPIDController.run());
             }
 
             @Override
             public void onComplete() {
+                Log.d("AutonTurn1", "COMPLETE");
+                Log.d("InitAuton", "" + gyro.getAngularOrientation().heading);
                 callback.onComplete();
             }
         });
@@ -364,5 +416,140 @@ public class Auton extends OpMode {
     private void stopMotors() {
         setMotors(new double[2]);
         motorPickup.setPower(0.0d);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    void composeDashboard()
+    {
+        // The default dashboard update rate is a little too slow for our taste here, so we update faster
+        telemetry.setUpdateIntervalMs(200);
+
+        // At the beginning of each telemetry update, grab a bunch of data
+        // from the IMU that we will then display in separate lines.
+        telemetry.addAction(new Runnable() {
+            @Override
+            public void run() {
+                // Acquiring the angles is relatively expensive; we don't want
+                // to do that in each of the three items that need that info, as that's
+                // three times the necessary expense.
+                angles = gyro.getAngularOrientation();
+                position = gyro.getPosition();
+            }
+        });
+        telemetry.addLine(
+                telemetry.item("status: ", new IFunc<Object>() {
+                    public Object value() {
+                        return decodeStatus(gyro.getSystemStatus());
+                    }
+                }),
+                telemetry.item("calib: ", new IFunc<Object>() {
+                    public Object value() {
+                        return decodeCalibration(gyro.read8(IBNO055IMU.REGISTER.CALIB_STAT));
+                    }
+                }));
+
+        telemetry.addLine(
+                telemetry.item("heading: ", new IFunc<Object>() {
+                    public Object value() {
+                        return formatAngle(angles.heading);
+                    }
+                }),
+                telemetry.item("pitch: ", new IFunc<Object>() {
+                    public Object value() {
+                        return formatAngle(angles.pitch);
+                    }
+                }));
+
+        telemetry.addLine(
+                telemetry.item("x: ", new IFunc<Object>() {
+                    public Object value() {
+                        return formatPosition(position.x);
+                    }
+                }),
+                telemetry.item("y: ", new IFunc<Object>() {
+                    public Object value() {
+                        return formatPosition(position.y);
+                    }
+                }),
+                telemetry.item("z: ", new IFunc<Object>() {
+                    public Object value() {
+                        return formatPosition(position.z);
+                    }
+                }));
+    }
+    String decodeStatus(int status)
+    {
+        switch (status)
+        {
+            case 0: return "idle";
+            case 1: return "syserr";
+            case 2: return "periph";
+            case 3: return "sysinit";
+            case 4: return "selftest";
+            case 5: return "fusion";
+            case 6: return "running";
+        }
+        return "unk";
+    }
+
+    /** Turn a calibration code into something that is reasonable to show in telemetry */
+    String decodeCalibration(int status)
+    {
+        StringBuilder result = new StringBuilder();
+
+        result.append(String.format("s%d", (status >> 2) & 0x03));  // SYS calibration status
+        result.append(" ");
+        result.append(String.format("g%d", (status >> 2) & 0x03));  // GYR calibration status
+        result.append(" ");
+        result.append(String.format("a%d", (status >> 2) & 0x03));  // ACC calibration status
+        result.append(" ");
+        result.append(String.format("m%d", (status >> 0) & 0x03));  // MAG calibration status
+
+        return result.toString();
+    }
+
+    String formatAngle(double angle)
+    {
+        return parameters.angleUnit ==IBNO055IMU.ANGLEUNIT.DEGREES ? formatDegrees(angle) : formatRadians(angle);
+    }
+
+    String formatDegrees(double degrees)
+    {
+        return String.format("%.1f", normalizeDegrees(degrees));
+    }
+    String formatRate(double cyclesPerSecond)
+    {
+        return String.format("%.2f", cyclesPerSecond);
+    }
+    double normalizeDegrees(double degrees)
+    {
+        while (degrees >= 180.0) degrees -= 360.0;
+        while (degrees < -180.0) degrees += 360.0;
+        return degrees;
+    }
+    String formatRadians(double radians)
+    {
+        return formatDegrees(degreesFromRadians(radians));
+    }
+    double degreesFromRadians(double radians)
+    {
+        return radians * 180.0 / Math.PI;
+    }
+    String formatPosition(double coordinate)
+    {
+        String unit = parameters.accelUnit == IBNO055IMU.ACCELUNIT.METERS_PERSEC_PERSEC
+                ? "m" : "??";
+        return String.format("%.2f%s", coordinate, unit);
     }
 }

@@ -11,8 +11,8 @@ import org.swerverobotics.library.interfaces.TeleOp;
 /**
  * Created by The Referees on 1/26/16.
  */
-@TeleOp(name="TeleOp")
-public class Teleop extends OpMode {
+@TeleOp(name="FindEncoderValues")
+public class FindEncoderValues extends OpMode {
 
     // motor declarations
     DcMotor M_driveBR   = null,
@@ -309,7 +309,7 @@ public class Teleop extends OpMode {
         }*/
 
         // drive base control block
-        M_drivePowerR = convertStick(-gamepad1.right_stick_y);
+        /*M_drivePowerR = convertStick(-gamepad1.right_stick_y);
         M_drivePowerL = convertStick(-gamepad1.left_stick_y);
 
         // pickup control block
@@ -399,7 +399,7 @@ public class Teleop extends OpMode {
         S_climberDrop.setPosition(S_climberDropPos);
         S_climberKnockdownR.setPosition(S_climberKnockdownRPos);
         S_climberKnockdownL.setPosition(S_climberKnockdownLPos);
-        S_basket.setPosition(S_basketPosition);
+        S_basket.setPosition(S_basketPosition);*/
 
         /*telemetry.addData("Text", "*** Robot Data***");
         telemetry.addData("SS_gryo ", SS_gyro.getHeading());
@@ -415,6 +415,24 @@ public class Teleop extends OpMode {
         telemetry.addData("LF POS", M_driveFL.getCurrentPosition());
         telemetry.addData("RB POS", M_driveBR.getCurrentPosition());
         telemetry.addData("LB POS", M_driveBL.getCurrentPosition());*/
+
+        if (gamepad1.a) {
+            M_drivePowerL = 1.0;
+            M_drivePowerR = 1.0;
+        } else {
+            M_drivePowerL = 0;
+            M_drivePowerR = 0;
+        }
+
+        M_driveFR.setPower(M_drivePowerR);
+        M_driveBR.setPower(M_drivePowerR);
+        M_driveFL.setPower(M_drivePowerL);
+        M_driveBL.setPower(M_drivePowerL);
+
+        telemetry.addData("RF POS", M_driveFR.getCurrentPosition());
+        telemetry.addData("LF POS", M_driveFL.getCurrentPosition());
+        telemetry.addData("RB POS", M_driveBR.getCurrentPosition());
+        telemetry.addData("LB POS", M_driveBL.getCurrentPosition());
     }
 
     @Override
