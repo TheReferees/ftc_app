@@ -3,10 +3,13 @@ package com.thereferees.ftc_app.OpModes;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.GyroSensor;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import com.qualcomm.robotcore.util.Range;
 
+import org.swerverobotics.library.ClassFactory;
+import org.swerverobotics.library.interfaces.IBNO055IMU;
 import org.swerverobotics.library.interfaces.TeleOp;
 
 /**
@@ -42,16 +45,18 @@ public class Teleop extends OpMode {
                     PICKUP_POWER    = 0.8d;
 
     // starting servo positions
-    final double    S_BASKET_START_POS      = Servo.MIN_POSITION,
-                    S_CLIMBER_DROP_START_POS        = 0.0d,
+    final double    S_BASKET_START_POS              = Servo.MIN_POSITION,
+                    S_CLIMBER_DROP_START_POS        = Servo.MAX_POSITION,
                     S_CLIMBER_KNOCKDOWN_R_START_POS = Servo.MAX_POSITION,
                     S_CLIMBER_KNOCKDOWN_L_START_POS = Servo.MIN_POSITION;
 
     // ending servo positions
     final double    S_BASKET_END_POS              = Servo.MAX_POSITION,
-                    S_CLIMBER_DROP_END_POS        = 0.0d,
+                    S_CLIMBER_DROP_END_POS        = Servo.MIN_POSITION,
                     S_CLIMBER_KNOCKDOWN_R_END_POS = 0.37d,
                     S_CLIMBER_KNOCKDOWN_L_END_POS = 0.54d;
+
+    final double    S_Climber_DROP_REST_POS = 0.36d;
 
     double          S_climberKnockdownRTargetEndPos = S_CLIMBER_KNOCKDOWN_R_END_POS,
                     S_climberKnockdownLTargetEndPos = S_CLIMBER_KNOCKDOWN_L_END_POS;
@@ -60,17 +65,21 @@ public class Teleop extends OpMode {
 
     // drive powers
     double          M_drivePowerR           = STOP,
-            M_drivePowerL           = STOP,
-            M_liftPowerR            = STOP,
-            M_liftPowerL            = STOP,
-            M_pickupPower           = STOP,
-            M_basketPower           = STOP;
+                    M_drivePowerL           = STOP,
+                    M_liftPowerR            = STOP,
+                    M_liftPowerL            = STOP,
+                    M_pickupPower           = STOP,
+                    M_basketPower           = STOP;
 
     // servo positions
-    double  S_basketPosition         = S_BASKET_START_POS,
+    double  S_basketPosition         = S_BASKET_END_POS,
             S_climberDropPos        = S_CLIMBER_DROP_START_POS,
             S_climberKnockdownRPos  = S_CLIMBER_KNOCKDOWN_R_START_POS,
             S_climberKnockdownLPos  = S_CLIMBER_KNOCKDOWN_L_START_POS;
+
+    //GyroSensor SS_gyro;
+    IBNO055IMU SS_gyro;
+    IBNO055IMU.Parameters parameters = new IBNO055IMU.Parameters();
 
     private double convertStick(float controllerValue) {   return Math.sin(Range.clip(controllerValue * Math.PI / 2 / C_STICK_TOP_THRESHOLD, -Math.PI / 2, Math.PI / 2)); }
     private Quadrant findQuadrant(Gamepad gamepad, String stick) {
@@ -181,7 +190,14 @@ public class Teleop extends OpMode {
     }
 
     void grabSensors() {
+    }
 
+    void calibrateSensors() {
+        parameters.angleUnit = IBNO055IMU.ANGLEUNIT.DEGREES;
+        parameters.accelUnit = IBNO055IMU.ACCELUNIT.METERS_PERSEC_PERSEC;
+        parameters.loggingEnabled = false;
+        parameters.loggingTag = "SS_gryo";
+        SS_gyro = ClassFactory.createAdaFruitBNO055IMU(hardwareMap.i2cDevice.get("SS_gyro"), parameters);
     }
 
     @Override
@@ -189,7 +205,8 @@ public class Teleop extends OpMode {
         grabMotors();
         configureMotors();
         grabServos();
-        grabSensors();
+        //grabSensors();
+        //calibrateSensors();
     }
 
     @Override
@@ -323,10 +340,6 @@ public class Teleop extends OpMode {
             M_basketPower = STOP;
         }
 
-        // lift control block
-        M_liftPowerR = convertStick(-gamepad2.right_stick_y);
-        M_liftPowerL = convertStick(-gamepad2.left_stick_y);
-
         if(gamepad1.dpad_down) {
             servoMode = ServoMode.AIM;
             S_climberKnockdownLTargetEndPos = S_CLIMBER_KNOCKDOWN_L_END_POS;
@@ -370,6 +383,22 @@ public class Teleop extends OpMode {
             S_basketPosition = S_BASKET_START_POS;
         }
 
+        // lift control block
+        M_liftPowerR = convertStick(-gamepad2.right_stick_y);
+        M_liftPowerL = convertStick(-gamepad2.left_stick_y);
+
+        if (M_liftPowerR > 0.5d || M_liftPowerL > 0.5d) {
+            S_basketPosition = S_BASKET_END_POS;
+        }
+
+        if (gamepad2.dpad_up) {
+            S_climberDropPos = S_CLIMBER_DROP_END_POS;
+        } else if (gamepad2.dpad_down) {
+            S_climberDropPos = S_CLIMBER_DROP_START_POS;
+        } else if (gamepad2.dpad_left || gamepad2.dpad_right) {
+            S_climberDropPos = S_Climber_DROP_REST_POS;
+        }
+
         M_driveFR.setPower(M_drivePowerR);
         M_driveFL.setPower(M_drivePowerL);
         M_driveBR.setPower(M_drivePowerR);
@@ -385,6 +414,12 @@ public class Teleop extends OpMode {
         S_basket.setPosition(S_basketPosition);
 
         telemetry.addData("Text", "*** Robot Data***");
+        /*telemetry.addData("SS_gryo ", SS_gyro.getHeading());
+        telemetry.addData("SS_gyro ", SS_gyro.getRotation());
+        telemetry.addData("SS_gyro x", SS_gyro.rawX());
+        telemetry.addData("SS_gyro y", SS_gyro.rawY());
+        telemetry.addData("SS_gyro z", SS_gyro.rawZ());*/
+
         telemetry.addData("Climber Drop Pos", S_climberDropPos);
         telemetry.addData("ClimberKnockdownR Pos", S_climberKnockdownRPos);
         telemetry.addData("ClimberKnockdownL Pos", S_climberKnockdownLPos);
