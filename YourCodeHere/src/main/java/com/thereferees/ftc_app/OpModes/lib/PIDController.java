@@ -16,6 +16,7 @@ public class PIDController {
     private double slowDownStart;
     private double fineTuneStart;
     private double powerMin;
+    private double powerMax = 1;
     final int TICKS_PER_REVOLUTION   = 1120;
     private double conversionFactor;
     private DcMotor[] motors;
@@ -77,9 +78,15 @@ public class PIDController {
         LIFT
     } TypePID typePID;
 
+    public void setPowerMax(double powerMax) {
+        this.powerMax = powerMax;
+    }
+
 
     //Turns left with positive value
     public void setTargets(double target) {
+        if (typePID == TypePID.TURN)
+            target *= 1.166667;
         for(int i = 0; i < sides; i++) {
             targets[i] = (int) (getCurrentPosition()[i] + target * conversionFactor);
 
@@ -115,7 +122,7 @@ public class PIDController {
                 if(error[i] < 0.0d) {
                     power[i] *= -1;
                 }
-                power[i] = Range.clip(power[i], -1.0d, 1.0d);
+                power[i] = Range.clip(power[i], -powerMax, powerMax);
             }
         }
         return power;
